@@ -4,6 +4,10 @@ Simplified client/server communication, using websockets
 
 ### Changelog
 
+`2.0.2`:
+
+- handle auth errors
+
 `2.0.1`:
 
 - don't pre parse auth tokens
