@@ -4,6 +4,13 @@ Simplified client/server communication, using websockets
 
 ### Changelog
 
+`3.0.0`:
+
+- major rewrite
+- purge stream api
+- tests & coverage
+- emitters fire 'disconnect' when client closes connection
+
 `2.0.2`:
 
 - handle auth errors
@@ -159,49 +166,6 @@ function onConnection(remote, client) {
   })
 }
 ```
-
-#### Stream API
-
-client
-```javascript
-
-var head = {
-  filename: 'hello.txt',
-  binary: true
-}
-
-// create upload stream with additional meta
-var stream = remote.stream('upload', head);
-
-// write buffers, since binary is set to true
-stream.write(new Buffer('Hello world!'));
-stream.end();
-
-stream.on('data', function(result) {
-  console.log('Upload complete with', result);
-});
-```
-
-server
-```javascript
-
-function onConnection(remote, client) {
-  remote.stream('upload', function(stream, head) {
-    var out = fs.createWriteStream(__dirname + '/' + head.filename);
-
-    out.on('finish', function() {
-      stream.end(new Buffer('Success'));
-    });
-
-    stream.pipe(out);
-  });
-}
-```
-
-### TODO
-
-- tests
-- coverage
 
 ### Author
 
