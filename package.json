@@ -1,6 +1,6 @@
 {
   "name": "seed-talker",
-  "version": "5.0.0",
+  "version": "5.0.1",
   "description": "Simplified client/server communication, using websockets",
   "main": "lib/talker/server.js",
   "browser": "lib/talker/client.js",
@@ -10,6 +10,10 @@
     "test": "mocha -R spec -b -t 30000 spec/index",
     "test-leak": "mocha -R spec -b -t 3000000 spec/leak",
     "coverage": "mocha -b -t 30000 spec/index --require blanket --reporter html-cov > coverage.html;"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:seedalpha/talker.git"
   },
   "config": {
     "blanket": {
