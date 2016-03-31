@@ -137,6 +137,48 @@ function onConnection(remote, client) {
 }
 ```
 
+### pubsub API
+
+client
+```javascript
+
+// create default pubsub
+var ps = remote.pubsub();
+
+// subscribe to `time` channel
+var sub = ps.subscribe('time');
+
+// receive updates when `time` changes
+sub.onUpdate(function(data) {
+  console.log('Time on server:', data);
+  
+  // close subscription
+  sub.close();
+});
+
+// create namespaced pubsub
+var sync = remote.pubsub('sync');
+```
+
+server
+```javascript
+
+function onConnection(remote, client) {
+  // create default pubsub
+  var ps = remote.pubsub();
+  
+  ps.publish('time', function(args, context, sub) {
+    var id = setInterval(function() {
+      sub.update((new Date()).toString());
+    }, 1000);
+    
+    sub.onClose(function() {
+      clearInterval(id);
+    });
+  });
+}
+```
+
 ### Author
 
 Vladimir Popov <vlad@seedalpha.net>

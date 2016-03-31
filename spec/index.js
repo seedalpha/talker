@@ -239,6 +239,36 @@ describe('talker', function() {
     });
   });
   
+  describe('pubsub', function() {
+    it('should continuously publish data to clients', function(done) {
+      
+      createServer('/pubsub', talk(function(t) {
+        var data = [1,2,3,4];
+        t.pubsub().publish('count', function(params, context, sub) {
+          params.should.deep.equal([]);
+          var id = setInterval(function() {
+            sub.update(data.shift());
+          }, 10);
+          sub.onClose(function() {
+            clearInterval(id);
+            done();
+          });
+        });
+      }));
+      
+      var sock = createClient('/pubsub');
+      var sub = sock.pubsub().subscribe('count');
+      var current = 1;
+      sub.onUpdate(function(val) {
+        val.should.equal(current);
+        current++;
+        if (val === 4) {
+          sub.close();
+        }
+      });
+    });
+  });
+  
   describe('connection', function() {
     it('should drop client connection on server error', function(done) {
       createServer('/test', talk(function(t) {
