@@ -1,6 +1,6 @@
 {
   "name": "seed-talker",
-  "version": "5.0.1",
+  "version": "5.0.2",
   "description": "Simplified client/server communication, using websockets",
   "main": "lib/talker/server.js",
   "browser": "lib/talker/client.js",
