@@ -36,7 +36,8 @@ var server = http.createServer();
 // authenticate
 function auth(token, cb) {
   if (token === 'my-secret-auth-token') {
-    cb(null, { id: 123, name: 'John', role: 'admin' });
+    var user = { id: 123, name: 'John', role: 'admin' };
+    cb(null, user, [user.id]);
   }
 }
 
@@ -77,6 +78,8 @@ var chat = remote.emitter('chat');
 chat.on('message', function(message) {
   //...
 });
+
+chat.emit('join', 'myChannel');
 ```
 
 server
@@ -90,8 +93,42 @@ function onConnection(remote, client) {
   });
 
   var chat = remote.emitter('chat');
-
-  chat.emit('message', 'Hi there!');
+  
+  // join default channels
+  chat
+    .join('lobby')
+    .broadcast('lobby')
+    .emit('message', client.name + ' joined the lobby');
+  
+  // broadcast to everyone
+  chat.on('join', function(channel) {
+    chat
+      .join(channel)
+      .broadcast(channel)
+      .emit('message', client.name + ' joined the channel');
+  });
+  
+  // exclude self during broadcast
+  chat.on('leave', function(channel) {
+    chat
+      .leave(channel)
+      .broadcast(channel, { excludeSelf: true })
+      .emit('message', client.name + ' left the channel');
+  });
+  
+  // route messages to proper channels
+  chat.on('message', function(channel, message) {
+    chat.broadcast(channel).emit('message', message);
+  });
+  
+  // single delivery of the message 
+  // regardless of how many channels 
+  // client is subscribed to
+  chat
+    .join('A', 'B', 'C')
+    .broadcast(['A', 'B'])
+    .emit('message', 'user X changed his name to Y'); // will be delivered once
+  
 }
 ```
 

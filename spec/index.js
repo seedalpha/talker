@@ -147,6 +147,109 @@ describe('talker', function() {
         sock.close();
       }, 100);
     });
+    
+    it('should broadcast to channels', function(done) {
+      var joined = false;
+      var count = 0;
+      createServer('/emitter5', talk(function(t) {
+        var chat = t.emitter('chat');
+        count++;
+        if (!joined) {
+          chat.join('room');
+          joined = true;
+        }
+        chat.broadcast('room').emit('message', 'client ' + count + ' joined chat');
+      }));
+      
+      var sock  = createClient('/emitter5');
+      var sock2 = createClient('/emitter5');
+      
+      var received = 0;
+      sock.emitter('chat').on('message', function() {
+        received++;
+        if (received === 2) {
+          done();
+        }
+      });
+      
+      sock2.emitter('chat').on('message', function() {
+        throw new Error('should not catch this event');
+      });
+    });
+    
+    it('should optionally exclude self during broadcast', function(done) {
+      createServer('/emitter6', talk(function(t) {
+        t.emitter('chat')
+          .join('room1', 'room2')
+          .broadcast(['room1', 'room2'], { excludeSelf: true })
+          .emit('message', 'hello world');
+      }));
+      
+      var received = 0;
+      
+      function onMessage(msg) {
+        msg.should.equal('hello world');
+        received++;
+        if (received === 3) {
+          done();
+        }
+      }
+      
+      createClient('/emitter6').emitter('chat').on('message', onMessage);
+      createClient('/emitter6').emitter('chat').on('message', onMessage);
+      createClient('/emitter6').emitter('chat').on('message', onMessage);
+    });
+    
+    it('should join and leave channels dynamically', function(done) {
+      var state = ['red', 'yellow', 'green'];
+      var count = 0;
+      
+      createServer('/emitter7', talk(function(t) {
+        
+        var emitter = t.emitter('semaphore')
+          .join(state[0]);
+          
+        emitter.on('switch', function() {
+          var prev = state[count % state.length];
+          count++;
+          var next = state[count % state.length];
+          
+          emitter.broadcast(prev).emit('left', prev);
+          emitter.leave(prev).join(next);
+          emitter.broadcast(next).emit('entered', next);
+        });
+      }));
+      
+      var localState = null;
+      var localPrevState = null;
+      var messagesReceived = 0;
+      var em = createClient('/emitter7').emitter('semaphore');
+      
+      em.on('left', function(data) {
+        state[(count - 1) % state.length].should.equal(data);
+        localPrevState = data;
+        messagesReceived++;
+      });
+      
+      em.on('entered', function(data) {
+        state[count % state.length].should.equal(data);
+        localState = data;
+        messagesReceived++;
+      });
+      
+      em.emit('switch');
+      
+      setTimeout(function() {
+        em.emit('switch');
+      }, 10);
+      
+      setTimeout(function() {
+        localState.should.equal('green');
+        localPrevState.should.equal('yellow');
+        messagesReceived.should.equal(4);
+        done();
+      }, 200);
+    });
   });
   
   describe('rpc', function() {
