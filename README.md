@@ -157,12 +157,16 @@ server
 
 function onConnection(remote, client) {
 
+  var context = {
+    client: client
+  };
+  
   // default
   var rpc = remote.rpc({
     sum: function(a, b, cb) {
       cb(null, a + b);
     }
-  });
+  }, context); // context is optional
 
   // namespaced
   var users = remote.rpc('users', {

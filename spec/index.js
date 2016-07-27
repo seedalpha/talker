@@ -340,6 +340,27 @@ describe('talker', function() {
         done();
       });
     });
+    
+    it('should support context', function(done) {
+      createServer('/rpc6', talk(function(t) {
+        t.rpc({
+          version: function(cb) {
+            cb(null, this.version);
+          }
+        }, {
+          version: '1.0.0'
+        });
+      }));
+      
+      var sock = createClient('/rpc6');
+      
+      sock.rpc().call('version', function(err, result) {
+        should.not.exist(err);
+        result.should.equal('1.0.0');
+        sock.close();
+        done();
+      });
+    });
   });
   
   describe('pubsub', function() {
