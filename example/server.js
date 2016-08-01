@@ -38,7 +38,7 @@ shoe(talk(function(token, cb) {
     }
   });
   
-})).install(server, '/talk');
+}).handle).install(server, '/talk');
 
 server.listen(50000, function() {
   console.log('Server is listening on port 50000');

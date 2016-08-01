@@ -13,7 +13,7 @@ function createServer(path, api) {
   ws.createServer({
     server: server,
     path: path
-  }, api);
+  }, api.handle);
 }
 
 function createClient(path, token) {

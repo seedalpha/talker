@@ -12,7 +12,7 @@ function createServer(path, api) {
   ws.createServer({
     server: server,
     path: path
-  }, api);
+  }, api.handle);
 }
 
 function createClient(path, token) {
@@ -250,7 +250,35 @@ describe('talker', function() {
         done();
       }, 200);
     });
+    
+    it('should broadcast to connected clients via server', function(done) {
+      
+      var api = talk(function(t) {
+        t.emitter('bus').join('podcast');
+      });
+      
+      var called = 0;
+      
+      function onMessage(text) {
+        text.should.equal('world');
+        called++;
+        if (called === 3) {
+          done();
+        }
+      }
+      
+      createServer('/emitter8', api);
+      createClient('/emitter8').emitter('bus').on('hello', onMessage);
+      createClient('/emitter8').emitter('bus').on('hello', onMessage);
+      createClient('/emitter8').emitter('bus').on('hello', onMessage);
+      setTimeout(function() {
+        var emitter = api.emitter('bus');
+        emitter.broadcast('podcast').emit('hello', 'world');
+      }, 50);
+    });
   });
+  
+  
   
   describe('rpc', function() {
     it('should successfully call a method', function(done) {

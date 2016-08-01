@@ -48,10 +48,10 @@ function onConection(remote, client) {
 }
 
 // accept connections
-shoe(talk(onConnection)).install(server, '/api');
+shoe(talk(onConnection).handle).install(server, '/api');
 
 // alternatively accept connections and authenticate clients
-shoe(talk(auth, onConnection)).install(server, '/secure');
+shoe(talk(auth, onConnection).handle).install(server, '/secure');
 
 server.listen(5000);
 ```
@@ -130,6 +130,16 @@ function onConnection(remote, client) {
     .emit('message', 'user X changed his name to Y'); // will be delivered once
   
 }
+
+// talker exposes a single object with `#emitter` method that returns emitter
+// that only supports `#broadcast` to push messages to connected users
+
+var glob = talker(onConnection);
+
+glob
+  .emitter('chat')
+  .broadcast('lobby')
+  .emit('message', 'Server will reboot soon');
 ```
 
 #### RPC API
