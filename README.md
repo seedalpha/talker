@@ -19,10 +19,10 @@ function getStream() {
 }
 
 // connect
-var remote = talk(getStream);
+var remote = talk(errHandler, getStream);
 
 // alternatively connect using auth-token
-var secure = talk(getStream, 'my-secret-auth-token');
+var secure = talk(errHandler, getStream, 'my-secret-auth-token');
 ```
 
 server
@@ -48,10 +48,10 @@ function onConection(remote, client) {
 }
 
 // accept connections
-shoe(talk(onConnection).handle).install(server, '/api');
+shoe(talk(errHandler, onConnection).handle).install(server, '/api');
 
 // alternatively accept connections and authenticate clients
-shoe(talk(auth, onConnection).handle).install(server, '/secure');
+shoe(talk(errHandler, onConnection, auth).handle).install(server, '/secure');
 
 server.listen(5000);
 ```
