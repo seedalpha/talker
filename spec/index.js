@@ -5,7 +5,7 @@ var talkClient  = require('../lib/talker/client');
 var server      = http.createServer();
 var should      = require('chai').should();
 
-server.setMaxListeners(20);
+server.setMaxListeners(25);
 
 function createServer(path, api) {
   ws.createServer({
@@ -521,6 +521,53 @@ describe('talker', function() {
       }, 10);
     });
 
+    it('should return connection ID', function(done) {
+      var connection = null;
+      createServer('/test3', talk(
+          null,
+          function(t) {
+            connection = t.connectionId;
+          }
+        )
+      );
+      
+      var sock = createClient('/test3');
+      setTimeout(function() {
+        connection.should.equal(sock.connectionId);
+        sock.close();
+        done();
+      }, 100);
+    });
+
+    it('should return connections list', function(done) {
+      var talkAPI =  talk(
+        null,
+        function(t, client) {
+          return;
+        }
+      );
+
+      createServer('/test4', talkAPI);
+      
+      var sock1 = createClient('/test4');
+      var sock2 = createClient('/test4');
+      var sock3 = createClient('/test4');
+
+      setTimeout(function() {
+        var ids = [ sock1, sock2, sock3 ].map(function (s) { return s.connectionId.toString() });
+        talkAPI.connections.should.have.all.keys(ids);
+        
+        ids.pop();
+        sock3.close();
+        
+        setTimeout(function() {
+          talkAPI.connections.should.have.all.keys(ids);
+          [ sock1, sock2 ].forEach(function (s) { s.close() }); 
+          done();
+        }, 100);
+      }, 100);
+    });
+    
     it('should reconnect client connection on server error', function(done) {
       var sock = createClient('/test');
       sock.emitter().emit('hello');
