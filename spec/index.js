@@ -1,6 +1,5 @@
 var http        = require('http');
 var talk        = require('../');
-var shoe        = require('shoe');
 var ws          = require('websocket-stream');
 var talkClient  = require('../lib/talker/client');
 var server      = http.createServer();
@@ -16,9 +15,13 @@ function createServer(path, api) {
 }
 
 function createClient(path, token) {
-  return talkClient(function() {
-    return ws('ws://localhost:50005' + path);
-  }, token);
+  return talkClient(
+    null,
+    function() {
+      return ws('ws://localhost:50005' + path);
+    },
+    token
+  );
 }
 
 var AUTH_TOKEN = '12345';
@@ -45,13 +48,17 @@ describe('talker', function() {
   
   describe('auth', function() {
     it('should successfully authneticate with correct auth token', function(done) {
-      createServer('/auth-success', talk(auth, function(t, client) {
-        client.name.should.equal('test');
-        t.emitter().emit('greeting', 'Welcome ' + client.name);
-      }));
+      createServer('/auth-success', talk(
+          null,
+          function(t, client) {
+            client.name.should.equal('test');
+            t.emitter().emit('greeting', 'Welcome ' + client.name);
+          },
+          auth
+        )
+      );
       
       var sock = createClient('/auth-success', AUTH_TOKEN);
-      
       sock.emitter().on('greeting', function(message) {
         message.should.equal('Welcome test');
         sock.close();
@@ -61,9 +68,14 @@ describe('talker', function() {
     
     it('should drop connection if token is not correct', function(done) {
       var passed = false;
-      createServer('/auth-fail', talk(auth, function(t, client) {
-        passed = true;
-      }));
+      createServer('/auth-fail', talk(
+          null,
+          function(t, client) {
+            passed = true;
+          },
+          auth
+        )
+      );
       
       var sock = createClient('/auth-fail', 'wrong-token');
       
@@ -75,11 +87,14 @@ describe('talker', function() {
     });
     
     it('should bypass auth if not auth function provided', function(done) {
-      createServer('/auth-bypass', talk(function(t, client) {
-        should.not.exist(client);
-        sock.close();
-        done();
-      }));
+      createServer('/auth-bypass', talk(
+        null, 
+        function(t, client) {
+          should.not.exist(client);
+          sock.close();
+          done();
+        })
+      );
       
       var sock = createClient('/auth-bypass');
     });
@@ -87,14 +102,17 @@ describe('talker', function() {
   
   describe('emitter', function() {
     it('should receive events from clients', function(done) {
-      createServer('/emitter', talk(function(t) {
-        var emitter = t.emitter();
-        emitter.on('log', function(message) {
-          message.should.equal('hello world');
-          sock.close();
-          done();
-        });
-      }));
+      createServer('/emitter', talk(
+        null,
+        function(t) {
+          var emitter = t.emitter();
+          emitter.on('log', function(message) {
+            message.should.equal('hello world');
+            sock.close();
+            done();
+          });
+        })
+      );
       
       var sock = createClient('/emitter');
       var em = sock.emitter();
@@ -102,9 +120,12 @@ describe('talker', function() {
     });
     
     it('should emit events to clients', function(done) {
-      createServer('/emitter2', talk(function(t) {
-        t.emitter().emit('piu', 1, 2, 3);
-      }));
+      createServer('/emitter2', talk(
+        null,
+        function(t) {
+          t.emitter().emit('piu', 1, 2, 3);
+        })
+      );
       
       var sock = createClient('/emitter2');
       
@@ -118,9 +139,12 @@ describe('talker', function() {
     });
     
     it('should support namespaces', function(done) {
-      createServer('/emitter3', talk(function(t) {
-        t.emitter('namespace').emit('event');
-      }));
+      createServer('/emitter3', talk(
+        null,
+        function(t) {
+          t.emitter('namespace').emit('event');
+        })
+      );
       
       var sock = createClient('/emitter3');
       var sock2 = createClient('/emitter3');
@@ -137,9 +161,12 @@ describe('talker', function() {
     });
     
     it('should emit disconnect when client disconnected', function(done) {
-      createServer('/emitter4', talk(function(t) {
-        t.emitter().on('disconnect', done);
-      }));
+      createServer('/emitter4', talk(
+        null,
+        function(t) {
+          t.emitter().on('disconnect', done);
+        })
+      );
       
       var sock = createClient('/emitter4');
       
@@ -151,15 +178,18 @@ describe('talker', function() {
     it('should broadcast to channels', function(done) {
       var joined = false;
       var count = 0;
-      createServer('/emitter5', talk(function(t) {
-        var chat = t.emitter('chat');
-        count++;
-        if (!joined) {
-          chat.join('room');
-          joined = true;
-        }
-        chat.broadcast('room').emit('message', 'client ' + count + ' joined chat');
-      }));
+      createServer('/emitter5', talk(
+        null,
+        function(t) {
+          var chat = t.emitter('chat');
+          count++;
+          if (!joined) {
+            chat.join('room');
+            joined = true;
+          }
+          chat.broadcast('room').emit('message', 'client ' + count + ' joined chat');
+        })
+      );
       
       var sock  = createClient('/emitter5');
       var sock2 = createClient('/emitter5');
@@ -178,12 +208,15 @@ describe('talker', function() {
     });
     
     it('should optionally exclude self during broadcast', function(done) {
-      createServer('/emitter6', talk(function(t) {
-        t.emitter('chat')
+      createServer('/emitter6', talk(
+        null,
+        function(t) {
+          t.emitter('chat')
           .join('room1', 'room2')
           .broadcast(['room1', 'room2'], { excludeSelf: true })
           .emit('message', 'hello world');
-      }));
+        })
+      );
       
       var received = 0;
       
@@ -204,21 +237,23 @@ describe('talker', function() {
       var state = ['red', 'yellow', 'green'];
       var count = 0;
       
-      createServer('/emitter7', talk(function(t) {
-        
-        var emitter = t.emitter('semaphore')
-          .join(state[0]);
+      createServer('/emitter7', talk(
+        null,
+        function(t) { 
+          var emitter = t.emitter('semaphore')
+            .join(state[0]);
           
-        emitter.on('switch', function() {
-          var prev = state[count % state.length];
-          count++;
-          var next = state[count % state.length];
-          
-          emitter.broadcast(prev).emit('left', prev);
-          emitter.leave(prev).join(next);
-          emitter.broadcast(next).emit('entered', next);
-        });
-      }));
+          emitter.on('switch', function() {
+            var prev = state[count % state.length];
+            count++;
+            var next = state[count % state.length];
+            
+            emitter.broadcast(prev).emit('left', prev);
+            emitter.leave(prev).join(next);
+            emitter.broadcast(next).emit('entered', next);
+          });
+        })
+      );
       
       var localState = null;
       var localPrevState = null;
@@ -253,9 +288,12 @@ describe('talker', function() {
     
     it('should broadcast to connected clients via server', function(done) {
       
-      var api = talk(function(t) {
-        t.emitter('bus').join('podcast');
-      });
+      var api = talk(
+        null,
+        function(t) {
+          t.emitter('bus').join('podcast');
+        }
+      );
       
       var called = 0;
       
@@ -282,9 +320,12 @@ describe('talker', function() {
   
   describe('rpc', function() {
     it('should successfully call a method', function(done) {
-      createServer('/rpc', talk(function(t) {
-        t.rpc(api);
-      }));
+      createServer('/rpc', talk(
+        null,
+        function(t) {
+          t.rpc(api);
+        })
+      );
       
       var sock = createClient('/rpc');
       
@@ -297,9 +338,12 @@ describe('talker', function() {
     });
     
     it('should get an error in a callback', function(done) {
-      createServer('/rpc2', talk(function(t) {
-        t.rpc(api);
-      }));
+      createServer('/rpc2', talk(
+        null,
+        function(t) {
+          t.rpc(api);
+        })
+      );
       
       var sock = createClient('/rpc2');
       
@@ -312,9 +356,12 @@ describe('talker', function() {
     });
     
     it('should get an error in method is missing', function(done) {
-      createServer('/rpc3', talk(function(t) {
-        t.rpc(api);
-      }));
+      createServer('/rpc3', talk(
+        null,
+        function(t) {
+          t.rpc(api);
+        })
+      );
       
       var sock = createClient('/rpc3');
       
@@ -327,9 +374,12 @@ describe('talker', function() {
     });
     
     it('should support namespaces', function(done) {
-      createServer('/rpc4', talk(function(t) {
-        t.rpc('math', api);
-      }));
+      createServer('/rpc4', talk(
+        null,
+        function(t) {
+          t.rpc('math', api);
+        })
+      );
       
       var sock = createClient('/rpc4');
       var sock2 = createClient('/rpc4');
@@ -351,13 +401,16 @@ describe('talker', function() {
     });
     
     it('should support invokation timeout', function(done) {
-      createServer('/rpc5', talk(function(t) {
-        t.rpc('long', {
-          hello: function(cb) {
-            setTimeout(cb, 500);
-          }
-        });
-      }));
+      createServer('/rpc5', talk(
+        null,
+        function(t) {
+          t.rpc('long', {
+            hello: function(cb) {
+              setTimeout(cb, 500);
+            }
+          });
+        })
+      );
       
       var sock = createClient('/rpc5');
       
@@ -370,15 +423,18 @@ describe('talker', function() {
     });
     
     it('should support context', function(done) {
-      createServer('/rpc6', talk(function(t) {
-        t.rpc({
-          version: function(cb) {
-            cb(null, this.version);
-          }
-        }, {
-          version: '1.0.0'
-        });
-      }));
+      createServer('/rpc6', talk(
+        null,
+        function(t) {
+          t.rpc({
+            version: function(cb) {
+              cb(null, this.version);
+            }
+          }, {
+            version: '1.0.0'
+          });
+        })
+      );
       
       var sock = createClient('/rpc6');
       
@@ -394,19 +450,22 @@ describe('talker', function() {
   describe('pubsub', function() {
     it('should continuously publish data to clients', function(done) {
       
-      createServer('/pubsub', talk(function(t) {
-        var data = [1,2,3,4];
-        t.pubsub().publish('count', function(params, context, sub) {
-          params.should.deep.equal([]);
-          var id = setInterval(function() {
-            sub.update(data.shift());
-          }, 10);
-          sub.onClose(function() {
-            clearInterval(id);
-            done();
+      createServer('/pubsub', talk(
+        null,
+        function(t) {
+          var data = [1,2,3,4];
+          t.pubsub().publish('count', function(params, context, sub) {
+            params.should.deep.equal([]);
+            var id = setInterval(function() {
+              sub.update(data.shift());
+            }, 10);
+            sub.onClose(function() {
+              clearInterval(id);
+              done();
+            });
           });
-        });
-      }));
+        })
+      );
       
       var sock = createClient('/pubsub');
       var sub = sock.pubsub().subscribe('count');
@@ -423,13 +482,16 @@ describe('talker', function() {
   
   describe('connection', function() {
     it('should drop client connection on server error', function(done) {
-      createServer('/test', talk(function(t) {
-        t.emitter().on('hello', function() {
-          var x = {};
-          x.x = x;
-          t.emitter().emit('this should drop client connection', x);
-        });
-      }));
+      createServer('/test', talk(
+        null,
+        function(t) {
+          t.emitter().on('hello', function() {
+            var x = {};
+            x.x = x;
+            t.emitter().emit('this should drop client connection', x);
+          });
+        })
+      );
     
       var sock = createClient('/test');
       sock.emitter().emit('hello');
@@ -442,20 +504,23 @@ describe('talker', function() {
     });
     
     it('should drop server connection on client error', function(done) {
-      createServer('/test2', talk(function(t) {
-        setTimeout(function() { 
-          t.connected().should.equal(false);
-          done();
-        }, 100);
-      }));
-    
+      createServer('/test2', talk(
+        null,
+        function(t) {
+          setTimeout(function() { 
+            t.connected().should.equal(false);
+            done();
+          }, 100);
+        })
+      );
+      
       var sock = createClient('/test2');
       
       setTimeout(function() {
         sock.close();
       }, 10);
     });
-    
+
     it('should reconnect client connection on server error', function(done) {
       var sock = createClient('/test');
       sock.emitter().emit('hello');
