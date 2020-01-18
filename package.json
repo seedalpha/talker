@@ -1,6 +1,6 @@
 {
-  "name": "seed-talker",
-  "version": "6.1.1",
+  "name": "@seedalpha/talker",
+  "version": "6.1.11",
   "description": "Simplified client/server communication, using websockets",
   "main": "lib/talker/server.js",
   "browser": "lib/talker/client.js",
@@ -28,12 +28,12 @@
   "devDependencies": {
     "blanket": "^1.1.7",
     "chai": "^3.2.0",
-    "enchilada": "^0.12.0",
     "express": "^4.12.3",
     "memwatch-next": "^0.2.9",
     "mocha": "^2.2.5",
-    "seed-queue": "^2.0.0",
     "shoe": "0.0.15",
-    "websocket-stream": "^2.0.2"
+    "websocket-stream": "^2.0.2",
+    "@seedalpha/enchilada": "^0.13.10",
+    "@seedalpha/queue": "^2.1.11"
   }
 }
